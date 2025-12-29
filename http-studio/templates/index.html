@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HTTP Studio</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="header">
+  <div class="wrap topbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <div class="brand-title">HTTP Studio</div>
+        <div class="hint">粘贴 cURL → 解析 → 预设改参 → 发送（移动端抽屉响应）</div>
+      </div>
+    </div>
+    <div class="hint right-hint">本地历史/收藏/预设都在浏览器 localStorage（服务端不落盘）</div>
+  </div>
+</header>
+
+<main class="wrap main-grid">
+  <!-- cURL 解析面板 -->
+  <section class="card accordion-panel" id="panel-curl">
+    <div class="card-hd accordion-hd" data-panel="curl">
+      <div class="title">cURL (bash) 解析</div>
+      <div class="pill">DevTools Copy as cURL</div>
+    </div>
+    <div class="card-body accordion-body">
+      <label>粘贴 cURL</label>
+      <textarea id="curlText" placeholder="curl 'https://...' -H '...' --data-raw '...'" class="curl-input"></textarea>
+
+      <div class="btns">
+        <button class="secondary" id="btnExample">示例</button>
+        <button id="btnParse">解析 → 编辑器</button>
+      </div>
+      <div id="parseMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- 请求编辑器面板 -->
+  <section class="card accordion-panel active" id="panel-editor">
+    <div class="card-hd accordion-hd" data-panel="editor">
+      <div class="title">请求编辑器</div>
+      <div class="tabs">
+        <button class="tab active" data-tab="req">Request</button>
+        <button class="tab" data-tab="presets">Presets</button>
+        <button class="tab" data-tab="adv">Advanced</button>
+      </div>
+    </div>
+
+      <div class="card-body">
+        <!-- Request tab -->
+        <div class="tabpane" id="tab-req">
+          <div class="row">
+            <div class="col-160">
+              <label>Method</label>
+              <select id="method">
+                <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option>
+                <option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+              </select>
+            </div>
+            <div class="col-flex">
+              <label>URL</label>
+              <input id="url" placeholder="https://httpbin.org/anything" />
+            </div>
+          </div>
+
+          <div class="split">
+            <div>
+              <label>Query（可视化）</label>
+              <div class="kv" id="kvQuery"></div>
+              <div class="btns">
+                <button class="secondary" id="qAdd">+ Add</button>
+                <button class="secondary" id="qSync">同步文本</button>
+              </div>
+              <label>Query（文本 key=value）</label>
+              <textarea id="queryText"></textarea>
+              <button class="secondary full" id="qImport">从文本导入</button>
+            </div>
+
+            <div>
+              <label>Headers（可视化）</label>
+              <div class="kv" id="kvHeaders"></div>
+              <div class="btns">
+                <button class="secondary" id="hAdd">+ Add</button>
+                <button class="secondary" id="hSync">同步文本</button>
+              </div>
+              <label>Headers（文本 Key: Value）</label>
+              <textarea id="headersText"></textarea>
+              <button class="secondary full" id="hImport">从文本导入</button>
+            </div>
+          </div>
+
+          <label>Body 类型</label>
+          <select id="bodyMode">
+            <option value="none">none</option>
+            <option value="json">json</option>
+            <option value="form-urlencoded">form-urlencoded</option>
+            <option value="multipart">multipart</option>
+            <option value="raw">raw</option>
+          </select>
+          <div class="hint" id="bodyHint"></div>
+
+          <label>Body</label>
+          <textarea id="bodyText"></textarea>
+
+          <div id="multipartFiles" class="subpanel" style="display:none">
+            <div class="hint">multipart 中写 key=@file 会在这里生成文件选择器（字段名要匹配）。</div>
+            <div id="fileInputs"></div>
+          </div>
+
+          <div id="rawFilePanel" class="subpanel" style="display:none">
+            <div class="hint">raw 模式可上传文件作为 body（优先于文本）。</div>
+            <input type="file" id="rawFile">
+          </div>
+
+          <div class="btns">
+            <button id="btnSend">发送</button>
+            <button class="secondary" id="btnApplyPresets">套预设</button>
+            <button class="secondary" id="btnExportCurl">导出 cURL</button>
+            <button class="danger" id="btnReset">清空</button>
+          </div>
+
+          <div id="sendMsg" class="msg"></div>
+        </div>
+
+        <!-- Presets tab -->
+        <div class="tabpane" id="tab-presets" style="display:none">
+          <div class="hint">
+            预设保存在 localStorage。支持：<b>点击规则输入值</b>、key 改 Query/Headers/Body(kv)、<b>JSON Path</b> 修改、作用域过滤（域名/路径）。
+          </div>
+
+          <div class="subpanel">
+            <div class="row">
+              <div class="col-flex">
+                <label>规则名（唯一）</label>
+                <input id="psName">
+              </div>
+              <div class="col-220">
+                <label>类型</label>
+                <select id="psType">
+                  <option value="kv">KV 改值（Query/Headers/Body-kv）</option>
+                  <option value="jsonpath">JSON Path 改值（Body 为 JSON）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-220">
+                <label>目标</label>
+                <select id="psTarget">
+                  <option value="query">Query</option>
+                  <option value="headers">Headers</option>
+                  <option value="body_kv">Body(kv)</option>
+                </select>
+              </div>
+              <div class="col-flex">
+                <label>匹配 key / path</label>
+                <input id="psMatch" placeholder="kv: realtime   /  jsonpath: data.realtime">
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-flex">
+                <label>默认替换值</label>
+                <input id="psValue" placeholder="可留空：点击应用时会弹窗输入">
+              </div>
+              <div class="col-220">
+                <label>点击应用时弹窗输入</label>
+                <select id="psPrompt">
+                  <option value="true">true</option>
+                  <option value="false">false</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-flex">
+                <label>作用域域名（可空，支持包含匹配）</label>
+                <input id="psHost" placeholder="例如 api.example.com">
+              </div>
+              <div class="col-flex">
+                <label>作用域路径（可空，支持包含匹配）</label>
+                <input id="psPath" placeholder="例如 /v1/query">
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-160">
+                <label>启用</label>
+                <select id="psEnabled">
+                  <option value="true">true</option>
+                  <option value="false">false</option>
+                </select>
+              </div>
+              <div class="col-220">
+                <label>解析后自动应用</label>
+                <select id="psAuto">
+                  <option value="true">true</option>
+                  <option value="false">false</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="btns">
+              <button class="secondary" id="psSave">保存/更新</button>
+              <button class="secondary" id="psClear">清空</button>
+              <button id="psApply">一键应用（命中作用域）</button>
+            </div>
+          </div>
+
+          <label>已保存规则</label>
+          <div id="presetList" class="list"></div>
+
+          <div class="btns">
+            <button class="secondary" id="psExport">导出 JSON</button>
+            <button class="secondary" id="psImport">导入 JSON</button>
+            <button class="danger" id="psWipe">清空全部</button>
+          </div>
+          <textarea id="psIO" placeholder="导入/导出 JSON"></textarea>
+        </div>
+
+        <!-- Advanced tab -->
+        <div class="tabpane" id="tab-adv" style="display:none">
+          <div class="split">
+            <div>
+              <label>Timeout（秒）</label>
+              <input id="timeout" type="number" min="1" max="120" value="20">
+            </div>
+            <div>
+              <label>Redirects</label>
+              <select id="allowRedirects">
+                <option value="true">follow</option>
+                <option value="false">no follow</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="split">
+            <div>
+              <label>Verify SSL</label>
+              <select id="verifySSL">
+                <option value="true">true</option>
+                <option value="false">false (-k)</option>
+              </select>
+            </div>
+            <div>
+              <label>Proxy（-x）</label>
+              <input id="proxy" placeholder="http://127.0.0.1:7890">
+            </div>
+          </div>
+
+          <div class="split">
+            <div>
+              <label>Basic Auth（-u）</label>
+              <input id="authUser" placeholder="user:pass">
+            </div>
+            <div>
+              <label>Cookies（-b）</label>
+              <input id="cookies" placeholder="a=1; b=2">
+            </div>
+          </div>
+
+          <div class="hint">
+            安全：默认禁止访问内网/localhost/保留网段，并且重定向后再次校验最终 URL。
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- 历史/收藏面板 -->
+  <section class="card accordion-panel" id="panel-history">
+    <div class="card-hd accordion-hd" data-panel="history">
+      <div class="title">历史 / 收藏</div>
+    </div>
+    <div class="card-body accordion-body">
+      <div class="row">
+        <input id="historySearch" placeholder="搜索历史/收藏（按 URL/Method/时间）" />
+      </div>
+      <div class="btns">
+        <button class="secondary" id="btnSaveStar">⭐ 收藏当前</button>
+        <button class="secondary" id="btnSaveHistory">保存到历史</button>
+        <button class="danger" id="btnClearHistory">清空历史</button>
+      </div>
+      <div id="historyList" class="list"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Mobile bottom bar -->
+<div class="mobilebar">
+  <button class="secondary" id="mParse">解析</button>
+  <button class="secondary" id="mPresets">套预设</button>
+  <button id="mSend">发送</button>
+</div>
+
+<!-- Response drawer -->
+<div class="drawer" id="drawer">
+  <div class="drawer-hd">
+    <div>
+      <div class="drawer-title">Response</div>
+      <div class="drawer-meta" id="respMeta"></div>
+    </div>
+    <div class="drawer-actions">
+      <button class="secondary" id="btnDownload">下载</button>
+      <button class="secondary" id="btnToggleView">预览/源码</button>
+      <button class="secondary" id="btnCloseDrawer">关闭</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="resp-top">
+      <span class="status" id="respStatus"></span>
+      <span class="small" id="respUrl"></span>
+    </div>
+
+    <div class="resp-split">
+      <div>
+        <div class="subttl">Headers</div>
+        <pre id="respHeaders"></pre>
+      </div>
+      <div>
+        <div class="subttl">Body</div>
+        <pre id="respBody"></pre>
+        <div id="htmlPreview" class="html-preview" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="hint" id="respHint"></div>
+  </div>
+</div>
+<div class="backdrop" id="backdrop"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
