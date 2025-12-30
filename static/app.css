@@ -1,4 +1,5 @@
 :root{
+  color-scheme: dark;
   --bg:#0b1020; --panel:rgba(255,255,255,.06);
   --stroke:rgba(255,255,255,.12); --text:rgba(255,255,255,.92); --muted:rgba(255,255,255,.65);
   --brand:#6ea8fe; --ok:#7ee787; --danger:#ff7b72;
@@ -155,6 +156,19 @@ input, select, textarea, button{
   color: var(--text);
   padding:11px 12px;
   outline:none;
+}
+
+/* Native <select> popups are often light (e.g. Windows/Chrome). Ensure options stay readable. */
+select{
+  cursor:pointer;
+}
+select option, select optgroup{
+  color:#111;
+  background:#fff;
+}
+select:focus, select:active{
+  color:#111;
+  background:#fff;
 }
 textarea{min-height:120px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
 input:focus, select:focus, textarea:focus{border-color: rgba(110,168,254,.6); box-shadow: 0 0 0 3px rgba(110,168,254,.15);}

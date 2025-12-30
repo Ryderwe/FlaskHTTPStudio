@@ -252,6 +252,16 @@ http://127.0.0.1:5000
 - 设置适当的防火墙规则
 - 考虑添加身份认证
 
+
+### Docker 部署
+
+```bash
+docker build -t flask-http-studio .
+docker run --rm -p 5000:5000 flask-http-studio
+```
+
+访问：http://127.0.0.1:5000
+
 ## 使用场景
 
 ### 1. API 调试
