@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Slin HTTP Studio</title>
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css', v=1) }}">
 </head>
 <body>
 <header class="header">
@@ -332,6 +332,6 @@
 </div>
 <div class="backdrop" id="backdrop"></div>
 
-<script src="/static/app.js"></script>
+<script src="{{ url_for('static', filename='app.js', v=1) }}"></script>
 </body>
 </html>
